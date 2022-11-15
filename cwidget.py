@@ -22,7 +22,7 @@ class CWidget(QWidget):
 
         # volume, slider
         self.vol.setRange(0, 100)
-        self.vol.setValue(100)
+        self.vol.setValue(50)
 
         # play time
         self.duration = ''

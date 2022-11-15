@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>VideoPlayer / with prompting</string>
+   <string>VideoPlayer / prompting ver.</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
