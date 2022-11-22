@@ -8,8 +8,12 @@ QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 
 
 if __name__ == '__main__':
+  
+    pname = "jooyeongkim"
+
     app = QApplication(sys.argv)
-    w = CWidget()
+    w = CWidget(pname)
     w.show()
+
 
     sys.exit(app.exec_())

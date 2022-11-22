@@ -1,13 +1,26 @@
+import os
+import threading
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QPalette
 from PyQt5.uic import loadUi
 from media import CMultiMedia
 
+from prompt_qt import Prompt
 import datetime
+import time
+from utils import formatting_filename
+import numpy as np
+
+
+event_dict = {
+    "video1" : [3000, 5000],
+    "video2" : [1000, 5000],
+    "video3" : [1000, 2000],
+}
 
 class CWidget(QWidget):
-    def __init__(self):
+    def __init__(self, pname):
         super().__init__()
         loadUi('main.ui', self)
 
@@ -40,12 +53,20 @@ class CWidget(QWidget):
         self.vol.valueChanged.connect(self.volumeChanged)
         self.bar.sliderMoved.connect(self.barChanged)
 
+
+        self.p_folder = "./participant/" + pname +'/'
+        if not os.path.exists(self.p_folder):
+            os.makedirs(self.p_folder)
+
+        
+        
+
     def clickAdd(self):
         files, ext = QFileDialog.getOpenFileNames(self
                                                   , 'Select one or more files to open'
                                                   , ''
                                                   , 'Video (*.mp4 *.mpg *.mpeg *.avi *.wma)')
-
+        print(files, ext)
         if files:
             cnt = len(files)
             row = self.list.count()
@@ -55,20 +76,33 @@ class CWidget(QWidget):
 
             self.mp.addMedia(files)
 
+        # 우선은 파일 하나만 add했을 때만 돌아감.
+        video_name = files[0].split('/')[-1].split('.')[0]     # video name만 추출
+        self.makePromptWindow(video_name)
+    
     def clickDel(self):
         row = self.list.currentRow()
         self.list.takeItem(row)
         self.mp.delMedia(row)
 
     def clickPlay(self):
+        # 비디오가 변경된 경우 prompt 다시 생성
+        video_name = self.list.currentItem().text().split('/')[-1].split('.')[0]     # video name만 추출
+        if video_name != self.prompt_win.current_video:
+            self.makePromptWindow(video_name)
+
         index = self.list.currentRow()
         self.mp.playMedia(index)
+        self.monitor_on = True
 
     def clickStop(self):
         self.mp.stopMedia()
+        self.monitor_on = False
+
 
     def clickPause(self):
         self.mp.pauseMedia()
+        self.monitor_on = False
 
     def clickForward(self):
         cnt = self.list.count()
@@ -91,8 +125,15 @@ class CWidget(QWidget):
             self.mp.prevMedia()
 
     def dbClickList(self, item):
+        # 비디오가 변경된 경우 prompt 다시 생성
+        video_name = self.list.currentItem().text().split('/')[-1].split('.')[0]     # video name만 추출
+        if video_name != self.prompt_win.current_video:
+            self.makePromptWindow(video_name)
+
+
         row = self.list.row(item)
         self.mp.playMedia(row)
+        self.monitor_on = True
 
     def volumeChanged(self, vol):
         self.mp.volumeMedia(vol)
@@ -121,3 +162,41 @@ class CWidget(QWidget):
         idx = stime.rfind('.')
         stime = f'{stime[:idx]} / {self.duration}'
         self.playtime.setText(stime)
+
+    def makePromptWindow(self, video_name):
+        # 프롬프트 서베이 결과를 저장할 파일 경로 지정 및 인스턴스 생성
+        self.save_path = os.path.join(self.p_folder, video_name) + ' score.txt'
+        self.prompt_win = Prompt(self, self.save_path, video_name)
+        self.event_list = event_dict[video_name]
+        print("make prompt")
+        
+        self.monitor_on = True
+        self.play_monitor = threading.Thread(target=self.playMonitor)
+        self.play_monitor.setDaemon(True)
+        self.play_monitor.start()
+        print("start monitoring")
+        #---
+
+
+    def playMonitor(self):
+        event_count = 0
+
+        while self.monitor_on:
+            if self.mp.player.position() in self.event_list:
+                print("[SHOW PROMPT] count - %d" % event_count)
+
+                # remove event time at the list
+                target = self.event_list.index(self.mp.player.position())
+                self.event_list[target] = 0
+
+                # show prompt
+                self.clickPause()
+                r = self.prompt_win.showModal(self.mp.player.position())
+
+                # move to next event
+                event_count += 1
+            
+            if np.array(self.event_list).sum() ==0 :
+                # 모든 prompt event가 끝나면 break
+                print("There is no event. thread break")
+                break

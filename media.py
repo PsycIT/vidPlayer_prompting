@@ -2,6 +2,8 @@ from PyQt5.QtMultimedia import QMediaPlaylist, QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl, QObject, pyqtSignal
 
 
+
+
 class CMultiMedia(QObject):
     state_signal = pyqtSignal(str)
     duration_signal = pyqtSignal(int)
@@ -25,6 +27,9 @@ class CMultiMedia(QObject):
         self.state_signal.connect(self.parent.updateState)
         self.duration_signal.connect(self.parent.updateBar)
         self.position_signal.connect(self.parent.updatePos)
+
+
+       
 
     def addMedia(self, files):
         for f in files:
@@ -81,3 +86,6 @@ class CMultiMedia(QObject):
 
     def errorHandle(self, e):
         self.state_signal.emit(self.player.errorString())
+
+
+ 
