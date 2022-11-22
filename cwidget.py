@@ -71,8 +71,11 @@ class CWidget(QWidget):
         self.mp.pauseMedia()
 
     def clickForward(self):
+        print('in clickForward')
+
         cnt = self.list.count()
         curr = self.list.currentRow()
+        print(cnt, curr)
         if curr < cnt - 1:
             self.list.setCurrentRow(curr + 1)
             self.mp.forwardMedia()
